@@ -30,6 +30,7 @@ impl Status {
 
 /// A tomato timer
 #[derive(Clap)]
+#[clap(author, about, version)]
 struct Opts {
     /// Work timer in minutes
     #[clap(short, long, default_value = "25")]
