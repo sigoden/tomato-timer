@@ -1,7 +1,3 @@
 # :tomato: Pomodoro cli :tomato:
 
-Simple timer for [pomodoro technique]
-
-[pomodoro technique]: <http://pomodorotechnique.com/>
-
-![](./asserts/tomato-timer.gif)
+![](https://user-images.githubusercontent.com/4012553/83226555-d7819380-a1b4-11ea-9300-752979fab240.gif)

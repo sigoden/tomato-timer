@@ -23,7 +23,7 @@ impl Status {
     pub fn color(&self) -> Color {
         match self {
             Status::Work => Color::Red,
-            Status::Break => Color::Red,
+            Status::Break => Color::Green,
         }
     }
 }
@@ -44,6 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let opts: Opts = Opts::parse();
     let mut status = Status::Work;
     let mut left_seconds = opts.work_time * 60;
+    let mut finish = false;
     crossterm::terminal::enable_raw_mode()?;
     let mut stdout = io::stdout();
     stdout.execute(crossterm::terminal::EnterAlternateScreen)?;
@@ -89,28 +90,31 @@ fn main() -> Result<(), Box<dyn Error>> {
         match rx.recv()? {
             Event::Input(input) => {
                 if input.code == event::KeyCode::Char('q') {
-                    let mut stdout = io::stdout();
-                    stdout.execute(crossterm::terminal::LeaveAlternateScreen)?;
-                    crossterm::terminal::disable_raw_mode()?;
-                    stdout.execute(crossterm::cursor::Show)?;
-                    std::process::exit(0);
+                    quit(0)?;
                 }
             }
             Event::Tick => {
-                if left_seconds == 0 {
-                    match status {
-                        Status::Work => {
-                            status = Status::Break;
-                            left_seconds = opts.break_time * 60;
-                            notify("Your work time is up, take a break!");
+                if !finish {
+                    if left_seconds == 0 {
+                        match status {
+                            Status::Work => {
+                                status = Status::Break;
+                                left_seconds = opts.break_time * 60;
+                                notify("Your work time is up, take a break!");
+                            }
+                            Status::Break => {
+                                notify("Your break time is up!!");
+                                finish = true;
+                            }
                         }
-                        Status::Break => {
-                            notify("Your break time is up!!");
-                        }
+                    } 
+                    if left_seconds > 0 {
+                         left_seconds -= 1; 
                     }
                 }
-                left_seconds -= 1;
+
             }
+
         }
     }
 }
@@ -122,4 +126,12 @@ enum Event<I> {
 
 fn notify(msg: &str) {
     let _ = Notification::new().summary("Tomato Timer").body(msg).show();
+}
+
+fn quit(code: i32) -> Result<(), Box<dyn Error>> {
+    let mut stdout = io::stdout();
+    stdout.execute(crossterm::terminal::LeaveAlternateScreen)?;
+    crossterm::terminal::disable_raw_mode()?;
+    stdout.execute(crossterm::cursor::Show)?;
+    std::process::exit(code);
 }
