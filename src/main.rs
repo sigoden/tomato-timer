@@ -1,16 +1,12 @@
 use clap::Clap;
+use crossterm::{event, ExecutableCommand};
+use notify_rust::Notification;
 use std::sync::mpsc;
 use std::thread;
 use std::{error::Error, io, time::Duration};
 use terminal_fonts::to_block_string;
-use termion::{
-    event::Key,
-    input::{MouseTerminal, TermRead},
-    raw::IntoRawMode,
-    screen::AlternateScreen,
-};
 use tui::{
-    backend::TermionBackend,
+    backend::CrosstermBackend,
     layout::{Alignment, Rect},
     style::{Color, Style},
     widgets::{Paragraph, Text},
@@ -37,35 +33,29 @@ impl Status {
 struct Opts {
     /// Work timer in minutes
     #[clap(short, long, default_value = "25")]
-    work_timer: u64,
+    work_time: u64,
     /// Break timer in minutes
     #[clap(short, long, default_value = "5")]
-    break_timer: u64,
+    break_time: u64,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let opts: Opts = Opts::parse();
     let mut status = Status::Work;
-    let mut left_seconds = opts.work_timer * 60;
-
-    let stdout = io::stdout().into_raw_mode()?;
-    let stdout = MouseTerminal::from(stdout);
-    let stdout = AlternateScreen::from(stdout);
-    let backend = TermionBackend::new(stdout);
+    let mut left_seconds = opts.work_time * 60;
+    crossterm::terminal::enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    stdout.execute(crossterm::terminal::EnterAlternateScreen)?;
+    stdout.execute(crossterm::cursor::Hide)?;
+    let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
     let (tx, rx) = mpsc::channel();
 
     let tx_key_event = tx.clone();
-    thread::spawn(move || {
-        let stdin = io::stdin();
-        for evt in stdin.keys() {
-            if let Ok(key) = evt {
-                if let Err(err) = tx_key_event.send(Event::Input(key)) {
-                    eprintln!("{}", err);
-                    return;
-                }
-            }
+    thread::spawn(move || loop {
+        if let event::Event::Key(key) = event::read().unwrap() {
+            tx_key_event.send(Event::Input(key)).unwrap();
         }
     });
     let tx_tick_event = tx.clone();
@@ -90,15 +80,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .alignment(Alignment::Center)
                 .style(style);
             let size = f.size();
-            let y = (size.height - text_height) /2;
+            let y = (size.height - text_height) / 2;
             let rect = Rect::new(0, y, size.width, text_height);
             f.render_widget(paragraph, rect);
         })?;
 
         match rx.recv()? {
             Event::Input(input) => {
-                if input == Key::Char('q') {
-                    break;
+                if input.code == event::KeyCode::Char('q') {
+                    let mut stdout = io::stdout();
+                    stdout.execute(crossterm::terminal::LeaveAlternateScreen)?;
+                    crossterm::terminal::disable_raw_mode()?;
+                    stdout.execute(crossterm::cursor::Show)?;
+                    std::process::exit(0);
                 }
             }
             Event::Tick => {
@@ -106,21 +100,25 @@ fn main() -> Result<(), Box<dyn Error>> {
                     match status {
                         Status::Work => {
                             status = Status::Break;
-                            left_seconds = opts.break_timer * 60;
-                            // TODO desktop notify
+                            left_seconds = opts.break_time * 60;
+                            notify("Your work time is up, take a break!");
                         }
-                        Status::Break => {}
+                        Status::Break => {
+                            notify("Your break time is up!!");
+                        }
                     }
                 }
                 left_seconds -= 1;
             }
         }
     }
-
-    Ok(())
 }
 
 enum Event<I> {
     Input(I),
     Tick,
+}
+
+fn notify(msg: &str) {
+    let _ = Notification::new().summary("Tomato Timer").body(msg).show();
 }

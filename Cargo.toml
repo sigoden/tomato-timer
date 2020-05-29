@@ -13,6 +13,7 @@ readme = "README.md"
 
 [dependencies]
 clap = "3.0.0-beta.1"
-termion = "1.5"
-tui = "0.9"
+tui = { version = "0.9", features = ["crossterm"], default-features = false }
+crossterm = "0.17"
 terminal-fonts = "0.1.0"
+notify-rust = "4.0.0-rc.1"
