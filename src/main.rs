@@ -1,6 +1,5 @@
 use clap::Clap;
 use crossterm::{event, ExecutableCommand};
-use notify_rust::Notification;
 use std::sync::mpsc;
 use std::thread;
 use std::{error::Error, io, time::Duration};
@@ -107,14 +106,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 finish = true;
                             }
                         }
-                    } 
+                    }
                     if left_seconds > 0 {
-                         left_seconds -= 1; 
+                        left_seconds -= 1;
                     }
                 }
-
             }
-
         }
     }
 }
@@ -124,8 +121,29 @@ enum Event<I> {
     Tick,
 }
 
+#[cfg(not(target_os = "windows"))]
 fn notify(msg: &str) {
-    let _ = Notification::new().summary("Tomato Timer").body(msg).show();
+    let _ = notify_rust::Notification::new()
+        .summary("Tomato Timer")
+        .body(msg)
+        .show();
+}
+
+#[cfg(target_os = "windows")]
+fn notify(msg: &str) {
+    let _ = std::process::Command::new("powershell")
+        .args(&[
+            "-WindowStyle",
+            "Hidden",
+            "-NonInteractive",
+            "-Command",
+            format!(
+                "New-BurntToastNotification -Text \"Tomato Timer\",\"{}\"",
+                msg
+            )
+            .as_str(),
+        ])
+        .status();
 }
 
 fn quit(code: i32) -> Result<(), Box<dyn Error>> {
