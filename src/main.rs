@@ -50,7 +50,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     stdout.execute(crossterm::cursor::Hide)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    terminal.hide_cursor()?;
     let (tx, rx) = mpsc::channel();
 
     let tx_key_event = tx.clone();
