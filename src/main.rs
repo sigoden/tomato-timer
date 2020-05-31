@@ -122,27 +122,33 @@ enum Event<I> {
 
 #[cfg(not(target_os = "windows"))]
 fn notify(msg: &str) {
-    let _ = notify_rust::Notification::new()
-        .summary("Tomato Timer")
-        .body(msg)
-        .show();
+    let msg = msg.to_string();
+    std::thread::spawn(move || {
+        let _ = notify_rust::Notification::new()
+            .summary("Tomato Timer")
+            .body(msg.as_str())
+            .show();
+    });
 }
 
 #[cfg(target_os = "windows")]
 fn notify(msg: &str) {
-    let _ = std::process::Command::new("powershell")
-        .args(&[
-            "-WindowStyle",
-            "Hidden",
-            "-NonInteractive",
-            "-Command",
-            format!(
-                "New-BurntToastNotification -Text \"Tomato Timer\",\"{}\"",
-                msg
-            )
-            .as_str(),
-        ])
-        .status();
+    let msg = msg.to_string();
+    std::thread::spawn(move || {
+        let _ = std::process::Command::new("powershell")
+            .args(&[
+                "-WindowStyle",
+                "Hidden",
+                "-NonInteractive",
+                "-Command",
+                format!(
+                    "New-BurntToastNotification -Text \"Tomato Timer\",\"{}\"",
+                    msg
+                )
+                .as_str(),
+            ])
+            .status();
+    });
 }
 
 fn quit(code: i32) -> Result<(), Box<dyn Error>> {
