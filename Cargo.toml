@@ -1,6 +1,6 @@
 [package]
 name = "tomato-timer"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["sigoden <sigoden@gmail.com>"]
 edition = "2018"
 description = """
@@ -12,10 +12,8 @@ exclude = ["assets/*", ".github"]
 readme = "README.md"
 
 [dependencies]
-clap = "3.0.0-beta.1"
-tui = { version = "0.9", features = ["crossterm"], default-features = false }
-crossterm = "0.17"
+clap = { version = "3", features = ["derive"] }
+tui = { version = "0.17" }
+crossterm = "0.23"
 terminal-fonts = "0.1.0"
-
-[target.'cfg(not(target_os="windows"))'.dependencies]
-notify-rust = "3.6.3"
+notify-rust = "4"

@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 use crossterm::{event, ExecutableCommand};
 use std::sync::mpsc;
 use std::thread;
@@ -8,7 +8,8 @@ use tui::{
     backend::CrosstermBackend,
     layout::{Alignment, Rect},
     style::{Color, Style},
-    widgets::{Paragraph, Text},
+    text::Text,
+    widgets::Paragraph,
     Terminal,
 };
 
@@ -28,8 +29,8 @@ impl Status {
 }
 
 /// A tomato timer
-#[derive(Clap)]
-#[clap(author, about, version)]
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
 struct Opts {
     /// Work timer in minutes
     #[clap(short, long, default_value = "25")]
@@ -65,18 +66,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     loop {
-        terminal.draw(|mut f| {
+        terminal.draw(|f| {
             let minutes = left_seconds / 60;
             let seconds = left_seconds % 60;
             let block_string = to_block_string(&format!("{:02}:{:02}", minutes, seconds));
-            let texts: Vec<Text> = block_string
-                .split("\n")
-                .map(|v| format!("{}\n", v))
-                .map(|v| Text::raw(v))
-                .collect();
-            let text_height = texts.len() as u16;
-            let style = Style::new().fg(status.color());
-            let paragraph = Paragraph::new(texts.iter())
+            let text = Text::raw(block_string);
+            let text_height = text.height() as u16;
+            let style = Style::default().fg(status.color());
+            let paragraph = Paragraph::new(text)
                 .alignment(Alignment::Center)
                 .style(style);
             let size = f.size();
@@ -87,7 +84,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         match rx.recv()? {
             Event::Input(input) => {
-                if input.code == event::KeyCode::Char('q') {
+                if input.code == event::KeyCode::Char('q')
+                    || (input.code == event::KeyCode::Char('C')
+                        && input.modifiers == event::KeyModifiers::CONTROL)
+                {
                     quit(0)?;
                 }
             }
@@ -120,7 +120,6 @@ enum Event<I> {
     Tick,
 }
 
-#[cfg(not(target_os = "windows"))]
 fn notify(msg: &str) {
     let msg = msg.to_string();
     std::thread::spawn(move || {
@@ -128,26 +127,6 @@ fn notify(msg: &str) {
             .summary("Tomato Timer")
             .body(msg.as_str())
             .show();
-    });
-}
-
-#[cfg(target_os = "windows")]
-fn notify(msg: &str) {
-    let msg = msg.to_string();
-    std::thread::spawn(move || {
-        let _ = std::process::Command::new("powershell")
-            .args(&[
-                "-WindowStyle",
-                "Hidden",
-                "-NonInteractive",
-                "-Command",
-                format!(
-                    "New-BurntToastNotification -Text \"Tomato Timer\",\"{}\"",
-                    msg
-                )
-                .as_str(),
-            ])
-            .status();
     });
 }
 
