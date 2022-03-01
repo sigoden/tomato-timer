@@ -59,10 +59,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             tx_key_event.send(Event::Input(key)).unwrap();
         }
     });
-    let tx_tick_event = tx.clone();
     thread::spawn(move || loop {
         thread::sleep(Duration::from_secs(1));
-        tx_tick_event.send(Event::Tick).unwrap();
+        tx.send(Event::Tick).unwrap();
     });
 
     loop {
