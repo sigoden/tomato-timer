@@ -1,100 +1,54 @@
-name: Rust
+name: CI
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+    - '*'
+  push:
+    branches:
+    - main
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  build:
-    name: Run rust ${{ matrix.rust }} on ${{ matrix.os }}
-
-    runs-on: ${{ matrix.os }}
+  all:
+    name: All
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest, 'windows-latest']
-        rust: [stable]
+        os:
+        - ubuntu-latest
+        - macos-latest
+        - windows-latest
+
+    runs-on: ${{matrix.os}}
+
+    env:
+      RUSTFLAGS: --deny warnings
 
     steps:
-    - uses: hecrj/setup-rust-action@v1
-      with:
-        rust-version: ${{ matrix.rust }}
-    - uses: actions/checkout@v1
-    - name: Install ubuntu packages
-      run: sudo apt-get install -y libdbus-1-dev pkg-config
-      if: matrix.os == 'ubuntu-latest'
-    # - name: Run tests
-    #   run: cargo test --verbose
-    - name: Build release
-      run: cargo build --verbose --release
-    - name: Upload unix binary
-      uses: actions/upload-artifact@v1
-      if: matrix.os != 'windows-latest'
-      with:
-        name: tomato-timer-${{ matrix.os }}
-        path: target/release/tomato-timer
-    - name: Upload windows binary
-      uses: actions/upload-artifact@v1
-      if: matrix.os == 'windows-latest'
-      with:
-        name: tomato-timer-${{ matrix.os }}
-        path: target/release/tomato-timer.exe
+    - uses: actions/checkout@v2
 
-  release:
-    name: Release
-    needs: build
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    - name: Install Rust Toolchain Components
+      uses: actions-rs/toolchain@v1
+      with:
+        components: clippy, rustfmt
+        override: true
+        toolchain: stable
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v1
-    - uses: actions/download-artifact@v1
-      with:
-        name: tomato-timer-ubuntu-latest
-        path: dist/tomato-timer-ubuntu-latest
-    - uses: actions/download-artifact@v1
-      with:
-        name: tomato-timer-macOS-latest
-        path: dist/tomato-timer-macOS-latest
-    - uses: actions/download-artifact@v1
-      with:
-        name: tomato-timer-windows-latest
-        path: dist/tomato-timer-windows-latest
-    - name: List release files
-      run: find dist/
-    - name: Create release
-      id: create_release
-      uses: actions/create-release@v1.0.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-    - name: Upload linux release asset
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./dist/tomato-timer-ubuntu-latest/tomato-timer
-        asset_name: tomato-timer-linux-x86_64
-        asset_content_type: application/x-elf
-    - name: Upload macos release asset
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./dist/tomato-timer-macOS-latest/tomato-timer
-        asset_name: tomato-timer-darwin-x86_64
-        asset_content_type: application/x-mach-binary
-    - name: Upload windows release asset
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./dist/tomato-timer-windows-latest/tomato-timer.exe
-        asset_name: tomato-timer-windows-x86_64.exe
-        asset_content_type: application/vnd.microsoft.portable-executable
+    - uses: Swatinem/rust-cache@v1
+
+    - name: Check Lockfile
+      run: |
+        cargo update --locked
+
+    - name: Test
+      run: cargo test --all
+
+    - name: Clippy
+      run: cargo clippy --all --all-targets
+
+    - name: Format
+      run: cargo fmt --all -- --check

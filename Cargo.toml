@@ -2,7 +2,7 @@
 name = "tomato-timer"
 version = "0.3.0"
 authors = ["sigoden <sigoden@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = """
 Simple timer for pomodoro technique
 """
@@ -17,3 +17,8 @@ tui = { version = "0.17" }
 crossterm = "0.23"
 terminal-fonts = "0.1.0"
 notify-rust = "4"
+
+[profile.release]
+lto = true
+strip = true
+opt-level = "z"
