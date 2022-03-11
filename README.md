@@ -2,7 +2,7 @@
 
 A terminal tomato timer with notification
 
-![screenshot](https://user-images.githubusercontent.com/4012553/157779869-af2498f2-d70e-490f-a44c-00bbbb838422.gif)
+![screenshot](https://user-images.githubusercontent.com/4012553/157780925-d363ec0a-cb2c-41bf-bd13-11ee91602f9f.gif)
 
 ## Install
 
