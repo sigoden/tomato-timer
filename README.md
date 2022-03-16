@@ -8,7 +8,7 @@ A terminal tomato timer with notification
 
 ### Binaries on macOS, Linux, Windows
 
-Download from [Github Releases](https://github.com/sigoden/tomato-timer/releases),  unzip and add argc to your $PATH.
+Download from [Github Releases](https://github.com/sigoden/tomato-timer/releases), unzip and add argc to your $PATH.
 
 ## Usage
 
